@@ -1,0 +1,10 @@
+// LCM Type for A0 key press program
+// Author: Sajan Patel
+// Uniqname: sajanptl
+// Date: 6 Jan 2016
+
+struct key_press_t
+{
+	int64_t utime;
+	int8_t key; // character typed
+}
