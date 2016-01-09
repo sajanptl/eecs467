@@ -39,8 +39,10 @@ public:
                    const std::string& chan,
                    const key_press_t* msg);
 private:
-	int64_t prevLocalTime;
-	int64_t prevLcmTime;
+	int64_t startLocal;
+	int64_t startLcm;
+	bool first;
+	int count;
 };
 
 ///////////////////////////////// Main Function ////////////////////////////////
@@ -60,7 +62,7 @@ int main()
 	lcm.subscribe(chan, &MsgHandler::onMessage, &mh);
 
 	cout << "Begin Key Listening" << endl;
-	while (!KILL) lcm.handle();
+	while (!KILL) lcm.handleTimeout(1000 / 15);
 		
 	cout << "Ending Key Producer Program" << endl;
 	return 0;
@@ -68,30 +70,28 @@ int main()
 ////////////////////////////////////////////////////////////////////////////////
 
 /* MsgHandler Implementation */
-MsgHandler::MsgHandler() : prevLocalTime(0), prevLcmTime(0) {}
+MsgHandler::MsgHandler() : startLocal(0), startLcm(0), first(true), count(0) {}
 
 void MsgHandler::onMessage(const lcm::ReceiveBuffer* rbuf, 
                    		   const std::string& chan,
                    		   const key_press_t* msg)
 {
-//// THIS WORKS, BUT IT'S THE WRONG RESULTS TO CALCULATE. WE NEED AVG KEY PRESS
-//// PER MINUTE ACCORDING TO A0 HANDOUT.
-
-	// update local delta time
 	int64_t time = utime_now();
-	int64_t dlocal = time - prevLocalTime;
-	prevLocalTime = time;
-
-	// update lcm delta time
-	int64_t dlcm = msg->utime - prevLcmTime;
-	prevLcmTime = msg->utime;
-
-	// print out results
-	cout << "Local Delta (s): " << (double)dlocal / 1000.0; 
-	cout << " LCM Delta (s): " << (double)dlcm / 1000.0;
-	cout << " Key: " << msg->key << endl;
+	++count;
+	
+	if (first)
+	{
+		first = false;
+		startLocal = time;
+		startLcm = msg->utime;
+	}
+	else
+	{
+		cout << "Local Avg: " << (double)count / ((double)(time - startLocal) / 1000000.0);
+		cout << "\tLCM Avg: " << (double)count / ((double)(msg->utime - startLcm) / 1000000.0);
+		cout << "\tKey: " << msg->key << endl;
+	}
 }
-
 
 /* Kill Signal Handler */
 void sigHandler(int p)
